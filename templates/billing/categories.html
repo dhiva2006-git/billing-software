@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Categories{% endblock %}
+{% block page_title %}Categories{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 900px;">
+    <!-- Add Category -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Add New Category</div>
+        </div>
+        <form method="post" id="category-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label" for="category-name">Name *</label>
+                {{ form.name }}
+                {% if form.name.errors %}<div class="form-help" style="color: var(--accent-rose)">{{ form.name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="category-description">Description</label>
+                {{ form.description }}
+            </div>
+            <button type="submit" class="btn btn-primary" id="category-submit">
+                <i class="fas fa-plus"></i> Add Category
+            </button>
+        </form>
+    </div>
+
+    <!-- Categories List -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">All Categories</div>
+            <span class="badge badge-info">{{ categories|length }}</span>
+        </div>
+        {% if categories %}
+            {% for category in categories %}
+            <div class="d-flex align-center justify-between" style="padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+                <div>
+                    <div class="fw-600" style="color: var(--text-primary)">{{ category.name }}</div>
+                    <div class="text-xs text-muted">{{ category.num_products }} products{% if category.description %} · {{ category.description|truncatewords:8 }}{% endif %}</div>
+                </div>
+                <form method="post" action="{% url 'billing:category_delete' category.pk %}"
+                      onsubmit="return confirm('Delete category {{ category.name }}?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-icon" style="color: var(--accent-rose)" title="Delete" id="delete-category-{{ category.id }}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state" style="padding: 30px 10px">
+                <i class="fas fa-tags"></i>
+                <p>No categories yet</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

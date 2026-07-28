@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% load billing_tags %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- KPI Cards -->
+<div class="kpi-grid">
+    <div class="kpi-card" style="animation-delay: 0s">
+        <div class="kpi-icon"><i class="fas fa-indian-rupee-sign"></i></div>
+        <div class="kpi-value" id="kpi-today-sales">₹{{ today_sales|floatformat:0|intcomma }}</div>
+        <div class="kpi-label">Today's Sales ({{ today_count }} bills)</div>
+    </div>
+    <div class="kpi-card" style="animation-delay: 0.1s">
+        <div class="kpi-icon"><i class="fas fa-calendar-week"></i></div>
+        <div class="kpi-value">₹{{ week_sales|floatformat:0|intcomma }}</div>
+        <div class="kpi-label">This Week's Sales</div>
+    </div>
+    <div class="kpi-card" style="animation-delay: 0.2s">
+        <div class="kpi-icon"><i class="fas fa-calendar"></i></div>
+        <div class="kpi-value">₹{{ month_sales|floatformat:0|intcomma }}</div>
+        <div class="kpi-label">This Month's Sales</div>
+    </div>
+    <div class="kpi-card" style="animation-delay: 0.3s">
+        <div class="kpi-icon"><i class="fas fa-box"></i></div>
+        <div class="kpi-value">{{ total_products|intcomma }}</div>
+        <div class="kpi-label">Active Products{% if low_stock_count > 0 %} · <span style="color: var(--accent-rose)">{{
+                low_stock_count }} low stock</span>{% endif %}</div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="dashboard-grid">
+    <!-- Weekly Sales Chart -->
+    <div class="card" style="animation-delay: 0.2s">
+        <div class="card-header">
+            <div>
+                <div class="card-title">Weekly Sales</div>
+                <div class="card-subtitle">Last 7 days revenue</div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="weeklyChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Top Products -->
+    <div class="card" style="animation-delay: 0.3s">
+        <div class="card-header">
+            <div>
+                <div class="card-title">Top Selling Products</div>
+                <div class="card-subtitle">This month</div>
+            </div>
+        </div>
+        {% if top_products %}
+        {% for product in top_products %}
+        <div class="top-product-item">
+            <div class="top-product-rank">{{ forloop.counter }}</div>
+            <div class="top-product-info">
+                <div class="top-product-name">{{ product.product_name }}</div>
+                <div class="top-product-qty">{{ product.total_qty }} units sold</div>
+            </div>
+            <div class="top-product-revenue">₹{{ product.total_revenue|floatformat:0|intcomma }}</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state" style="padding: 30px 10px">
+            <i class="fas fa-chart-simple"></i>
+            <p>No sales data yet</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Second Row -->
+<div class="dashboard-grid-full">
+    <!-- Monthly Chart -->
+    <div class="card" style="animation-delay: 0.3s">
+        <div class="card-header">
+            <div>
+                <div class="card-title">Monthly Revenue Trend</div>
+                <div class="card-subtitle">Last 6 months</div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="monthlyChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Low Stock + Recent -->
+    <div class="card" style="animation-delay: 0.4s">
+        <div class="card-header">
+            <div>
+                <div class="card-title">
+                    {% if low_stock_products %}
+                    <i class="fas fa-exclamation-triangle"
+                        style="color: var(--accent-amber); margin-right: 6px;"></i>Low Stock Alerts
+                    {% else %}
+                    Recent Transactions
+                    {% endif %}
+                </div>
+            </div>
+            {% if low_stock_products %}
+            <a href="{% url 'billing:product_list' %}?status=low" class="btn btn-sm btn-secondary">View All</a>
+            {% endif %}
+        </div>
+
+        {% if low_stock_products %}
+        {% for product in low_stock_products %}
+        <div class="low-stock-item">
+            <div class="low-stock-name">{{ product.name }}</div>
+            <div class="low-stock-count">{{ product.stock }} left</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <!-- Recent transactions instead -->
+        {% for bill in recent_bills|slice:":6" %}
+        <div class="low-stock-item">
+            <div>
+                <div class="low-stock-name">{{ bill.bill_number }}</div>
+                <div class="text-xs text-muted">{{ bill.customer_name }} · {{ bill.created_at|timesince }} ago</div>
+            </div>
+            <div style="font-weight: 700; color: var(--accent-primary);">₹{{ bill.grand_total|floatformat:0|intcomma }}
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state" style="padding: 30px 10px">
+            <i class="fas fa-receipt"></i>
+            <p>No transactions yet</p>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+<!-- Top Products Pie Chart -->
+<div class="card mt-3" style="animation-delay: 0.4s; max-width: 500px;">
+    <div class="card-header">
+        <div>
+            <div class="card-title">Product Revenue Share</div>
+            <div class="card-subtitle">This month's top products</div>
+        </div>
+    </div>
+    <div class="chart-container" style="height: 260px;">
+        <canvas id="topProductsChart"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}

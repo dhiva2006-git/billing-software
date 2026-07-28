@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+<div style="max-width: 700px;">
+    <!-- Tabs -->
+    <div class="settings-tabs" id="settings-tabs">
+        <button class="settings-tab active" data-tab="profile" id="tab-profile">
+            <i class="fas fa-store"></i> Shop Profile
+        </button>
+        <button class="settings-tab" data-tab="password" id="tab-password">
+            <i class="fas fa-lock"></i> Change Password
+        </button>
+    </div>
+
+    <!-- Shop Profile Tab -->
+    <div class="settings-panel active" id="panel-profile">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Shop Information</div>
+            </div>
+            <form method="post" id="shop-profile-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="profile">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="shop-name">Shop Name</label>
+                        {{ form.name }}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="shop-phone">Phone</label>
+                        {{ form.phone }}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="shop-address">Address</label>
+                    {{ form.address }}
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="shop-email">Email</label>
+                        {{ form.email }}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="shop-gst">GST Number</label>
+                        {{ form.gst_number }}
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="shop-tax-rate">Tax Rate (%)</label>
+                        {{ form.tax_rate }}
+                        <div class="form-help">Applied on all bills. Set 0 for no tax.</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="shop-currency">Currency Symbol</label>
+                        {{ form.currency_symbol }}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="shop-threshold">Default Low Stock Threshold</label>
+                    {{ form.low_stock_threshold }}
+                    <div class="form-help">Default threshold for new products</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="save-profile-btn">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Password Tab -->
+    <div class="settings-panel" id="panel-password">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Change Password</div>
+            </div>
+            <form method="post" id="password-change-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="password">
+
+                <div class="form-group">
+                    <label class="form-label" for="id_old_password">Current Password</label>
+                    <input type="password" name="old_password" id="id_old_password" class="form-input"
+                           placeholder="Enter current password" required>
+                    {% if password_form.old_password.errors %}
+                        <div class="form-help" style="color: var(--accent-rose)">{{ password_form.old_password.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="id_new_password1">New Password</label>
+                        <input type="password" name="new_password1" id="id_new_password1" class="form-input"
+                               placeholder="Enter new password" required>
+                        {% if password_form.new_password1.errors %}
+                            <div class="form-help" style="color: var(--accent-rose)">{{ password_form.new_password1.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="id_new_password2">Confirm New Password</label>
+                        <input type="password" name="new_password2" id="id_new_password2" class="form-input"
+                               placeholder="Confirm new password" required>
+                        {% if password_form.new_password2.errors %}
+                            <div class="form-help" style="color: var(--accent-rose)">{{ password_form.new_password2.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="change-password-btn">
+                    <i class="fas fa-key"></i> Change Password
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Settings tabs
+    document.querySelectorAll('.settings-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+        });
+    });
+</script>
+{% endblock %}

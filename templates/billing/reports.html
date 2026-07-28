@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Reports{% endblock %}
+{% block page_title %}Reports{% endblock %}
+
+{% block content %}
+<!-- Date Filter -->
+<div class="filter-bar">
+    <form method="get" class="d-flex gap-1 align-center" style="flex: 1; flex-wrap: wrap; gap: 12px;" id="report-filter-form">
+        <label class="form-label" style="margin-bottom: 0; color: var(--text-muted);">From</label>
+        <input type="date" name="from" value="{{ date_from }}" class="form-input" style="width: 170px;" id="report-date-from">
+        <label class="form-label" style="margin-bottom: 0; color: var(--text-muted);">To</label>
+        <input type="date" name="to" value="{{ date_to }}" class="form-input" style="width: 170px;" id="report-date-to">
+        <button type="submit" class="btn btn-primary btn-sm" id="report-filter-apply">
+            <i class="fas fa-filter"></i> Apply Filter
+        </button>
+        <a href="{% url 'billing:export_csv' %}?from={{ date_from }}&to={{ date_to }}" class="btn btn-secondary btn-sm" id="export-csv-btn">
+            <i class="fas fa-download"></i> Export CSV
+        </a>
+    </form>
+</div>
+
+<!-- KPI Cards -->
+<div class="report-kpi-grid">
+    <div class="report-kpi" style="animation: fadeInUp 0.3s ease;">
+        <div class="report-kpi-value" style="color: var(--accent-primary);">₹{{ total_revenue|floatformat:0|intcomma }}</div>
+        <div class="report-kpi-label">Total Revenue</div>
+    </div>
+    <div class="report-kpi" style="animation: fadeInUp 0.3s ease 0.1s; animation-fill-mode: both;">
+        <div class="report-kpi-value" style="color: var(--accent-sky);">{{ total_bills|intcomma }}</div>
+        <div class="report-kpi-label">Total Bills</div>
+    </div>
+    <div class="report-kpi" style="animation: fadeInUp 0.3s ease 0.2s; animation-fill-mode: both;">
+        <div class="report-kpi-value" style="color: var(--accent-violet);">{{ total_items|intcomma }}</div>
+        <div class="report-kpi-label">Items Sold</div>
+    </div>
+    <div class="report-kpi" style="animation: fadeInUp 0.3s ease 0.3s; animation-fill-mode: both;">
+        <div class="report-kpi-value" style="color: var(--accent-amber);">₹{{ avg_bill_value|floatformat:0|intcomma }}</div>
+        <div class="report-kpi-label">Avg Bill Value</div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="dashboard-grid-full mb-3">
+    <!-- Daily Sales Chart -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="card-title">Daily Sales Trend</div>
+                <div class="card-subtitle">Revenue per day in selected period</div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="dailySalesChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Product Revenue Chart -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="card-title">Revenue by Product</div>
+                <div class="card-subtitle">Top products in selected period</div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="productRevenueChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-grid-full">
+    <!-- Top Products Table -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Top Selling Products</div>
+        </div>
+        {% if top_products %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Product</th>
+                    <th class="text-right">Qty Sold</th>
+                    <th class="text-right">Revenue</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in top_products %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td class="fw-600" style="color: var(--text-primary)">{{ product.product_name }}</td>
+                    <td class="text-right">{{ product.total_qty|intcomma }}</td>
+                    <td class="text-right fw-600" style="color: var(--accent-primary)">₹{{ product.total_revenue|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state" style="padding: 30px">
+            <p>No data for selected period</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Payment Breakdown -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Payment Methods</div>
+        </div>
+        {% if payment_breakdown %}
+            {% for pay in payment_breakdown %}
+            <div class="d-flex align-center justify-between" style="padding: 14px 0; border-bottom: 1px solid var(--border-color);">
+                <div class="d-flex align-center gap-1">
+                    <span class="badge {% if pay.payment_method == 'cash' %}badge-success{% elif pay.payment_method == 'upi' %}badge-info{% else %}badge-warning{% endif %}">
+                        {{ pay.payment_method|upper }}
+                    </span>
+                    <span class="text-muted text-sm">{{ pay.count }} bills</span>
+                </div>
+                <div class="fw-700" style="color: var(--text-primary)">₹{{ pay.total|floatformat:0|intcomma }}</div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="empty-state" style="padding: 30px">
+            <p>No data for selected period</p>
+        </div>
+        {% endif %}
+
+        <!-- Payment Pie Chart -->
+        {% if payment_breakdown %}
+        <div class="chart-container mt-2" style="height: 200px;">
+            <canvas id="paymentChart"></canvas>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    const REPORT_DATE_FROM = '{{ date_from }}';
+    const REPORT_DATE_TO = '{{ date_to }}';
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/reports.js' %}"></script>
+{% endblock %}

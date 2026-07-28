@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 700px;">
+    <div class="card">
+        <form method="post" id="product-form">
+            {% csrf_token %}
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="product-name">Product Name *</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}<div class="form-help" style="color: var(--accent-rose)">{{ form.name.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="product-sku">SKU</label>
+                    {{ form.sku }}
+                    <div class="form-help">Leave blank to auto-generate</div>
+                    {% if form.sku.errors %}<div class="form-help" style="color: var(--accent-rose)">{{ form.sku.errors.0 }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="product-category">Category</label>
+                    {{ form.category }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="product-unit">Unit</label>
+                    {{ form.unit }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="product-purchase-price">Purchase Price (₹)</label>
+                    {{ form.purchase_price }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="product-selling-price">Selling Price (₹) *</label>
+                    {{ form.selling_price }}
+                    {% if form.selling_price.errors %}<div class="form-help" style="color: var(--accent-rose)">{{ form.selling_price.errors.0 }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="product-stock">Stock Quantity</label>
+                    {{ form.stock }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="product-threshold">Low Stock Threshold</label>
+                    {{ form.low_stock_threshold }}
+                    <div class="form-help">Alert when stock falls below this</div>
+                </div>
+            </div>
+
+            <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+                {{ form.is_active }}
+                <label class="form-label" for="product-active" style="margin-bottom: 0; cursor: pointer;">Active Product</label>
+            </div>
+
+            <div class="d-flex gap-1" style="margin-top: 28px;">
+                <button type="submit" class="btn btn-primary" id="product-submit">
+                    <i class="fas fa-{% if is_edit %}save{% else %}plus{% endif %}"></i>
+                    {% if is_edit %}Update Product{% else %}Create Product{% endif %}
+                </button>
+                <a href="{% url 'billing:product_list' %}" class="btn btn-secondary" id="product-cancel">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

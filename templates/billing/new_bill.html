@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}New Bill{% endblock %}
+{% block page_title %}New Bill{% endblock %}
+
+{% block content %}
+<div class="billing-layout">
+    <!-- Left: Product Search & Items -->
+    <div class="billing-items">
+        <div class="card mb-3">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-search" style="color: var(--accent-primary); margin-right: 8px;"></i>Search Products</div>
+            </div>
+            <div style="position: relative;">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="bill-product-search" placeholder="Type product name or SKU to search..." autocomplete="off">
+                </div>
+                <div class="product-search-results" id="searchResults"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Bill Items</div>
+                <span class="badge badge-info" id="itemCount">0 items</span>
+            </div>
+
+            <!-- Items Header -->
+            <div class="bill-item-row" style="border-bottom: 2px solid var(--border-color); padding-bottom: 8px;">
+                <div class="text-xs fw-700 text-muted" style="text-transform: uppercase; letter-spacing: 1px;">Product</div>
+                <div class="text-xs fw-700 text-muted text-center" style="text-transform: uppercase; letter-spacing: 1px;">Qty</div>
+                <div class="text-xs fw-700 text-muted text-center" style="text-transform: uppercase; letter-spacing: 1px;">Price</div>
+                <div class="text-xs fw-700 text-muted text-center" style="text-transform: uppercase; letter-spacing: 1px;">Total</div>
+                <div></div>
+            </div>
+
+            <!-- Items Container -->
+            <div id="billItems">
+                <!-- Items added dynamically by JS -->
+            </div>
+
+            <div id="emptyBillState" class="empty-state" style="padding: 40px 10px;">
+                <i class="fas fa-cart-shopping"></i>
+                <h3>No items added</h3>
+                <p>Search and add products above</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Bill Summary -->
+    <div class="billing-summary">
+        <div class="card" style="flex: 1; display: flex; flex-direction: column;">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-receipt" style="color: var(--accent-primary); margin-right: 8px;"></i>Bill Summary</div>
+            </div>
+
+            <!-- Customer Info -->
+            <div class="form-group">
+                <label class="form-label" for="customer-name">Customer Name</label>
+                <input type="text" class="form-input" id="customer-name" placeholder="Walk-in Customer">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="customer-phone">Phone Number</label>
+                <input type="text" class="form-input" id="customer-phone" placeholder="Optional">
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--border-color); margin: 12px 0;">
+
+            <!-- Summary -->
+            <div style="flex: 1;">
+                <div class="summary-line">
+                    <span>Subtotal</span>
+                    <span id="billSubtotal">₹0.00</span>
+                </div>
+                <div class="summary-line">
+                    <span>Discount (₹)</span>
+                    <input type="number" id="billDiscount" value="0" min="0" step="0.01"
+                           style="width: 100px; padding: 4px 8px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-family: 'Inter', sans-serif; text-align: right; outline: none;">
+                </div>
+                <div class="summary-line">
+                    <span>Tax ({{ tax_rate }}%)</span>
+                    <span id="billTax">₹0.00</span>
+                </div>
+                <div class="summary-line total">
+                    <span>Grand Total</span>
+                    <span class="amount" id="billGrandTotal">₹0.00</span>
+                </div>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--border-color); margin: 16px 0;">
+
+            <!-- Payment Method -->
+            <div class="form-group">
+                <label class="form-label">Payment Method</label>
+                <div class="d-flex gap-1" style="flex-wrap: wrap;">
+                    <label class="btn btn-secondary btn-sm" style="cursor: pointer;" id="pay-cash-label">
+                        <input type="radio" name="payment" value="cash" checked style="display:none" id="pay-cash">
+                        <i class="fas fa-money-bill"></i> Cash
+                    </label>
+                    <label class="btn btn-secondary btn-sm" style="cursor: pointer;" id="pay-card-label">
+                        <input type="radio" name="payment" value="card" style="display:none" id="pay-card">
+                        <i class="fas fa-credit-card"></i> Card
+                    </label>
+                    <label class="btn btn-secondary btn-sm" style="cursor: pointer;" id="pay-upi-label">
+                        <input type="radio" name="payment" value="upi" style="display:none" id="pay-upi">
+                        <i class="fas fa-mobile-screen"></i> UPI
+                    </label>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="form-group">
+                <label class="form-label" for="bill-notes">Notes</label>
+                <input type="text" class="form-input" id="bill-notes" placeholder="Optional notes...">
+            </div>
+
+            <!-- Submit -->
+            <button class="btn btn-primary" id="createBillBtn" style="width: 100%; justify-content: center; padding: 14px; font-size: 16px;" disabled>
+                <i class="fas fa-check-circle"></i> Create Bill
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const TAX_RATE = parseFloat('{{ tax_rate|default:0 }}') || 0;
+    const CSRF_TOKEN = '{{ csrf_token }}';
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/billing.js' %}"></script>
+{% endblock %}
