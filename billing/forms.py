@@ -47,6 +47,12 @@ class ProductForm(forms.ModelForm):
             }),
         }
 
+    def __init__(self, *args, **kwargs):
+        shop = kwargs.pop('shop', None)
+        super(ProductForm, self).__init__(*args, **kwargs)
+        if shop:
+            self.fields['category'].queryset = Category.objects.filter(shop=shop)
+
 
 class CategoryForm(forms.ModelForm):
     """Form for creating categories."""

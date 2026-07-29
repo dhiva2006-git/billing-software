@@ -37,33 +37,36 @@ def dashboard(request):
     week_start = today_start - timedelta(days=now.weekday())
     month_start = today_start.replace(day=1)
 
+    shop = request.user.userprofile.shop
+
     # KPI calculations
-    today_bills = Bill.objects.filter(created_at__gte=today_start)
+    today_bills = Bill.objects.filter(shop=shop, created_at__gte=today_start)
     today_sales = today_bills.aggregate(total=Sum('grand_total'))['total'] or 0
     today_count = today_bills.count()
 
     week_sales = Bill.objects.filter(
-        created_at__gte=week_start
+        shop=shop, created_at__gte=week_start
     ).aggregate(total=Sum('grand_total'))['total'] or 0
 
     month_sales = Bill.objects.filter(
-        created_at__gte=month_start
+        shop=shop, created_at__gte=month_start
     ).aggregate(total=Sum('grand_total'))['total'] or 0
 
-    total_products = Product.objects.filter(is_active=True).count()
+    total_products = Product.objects.filter(shop=shop, is_active=True).count()
 
     # Low stock products
     low_stock_products = Product.objects.filter(
+        shop=shop,
         is_active=True,
         stock__lte=F('low_stock_threshold')
     )[:8]
 
     # Recent transactions
-    recent_bills = Bill.objects.select_related('created_by')[:10]
+    recent_bills = Bill.objects.filter(shop=shop).select_related('created_by')[:10]
 
     # Top selling products (this month)
     top_products = BillItem.objects.filter(
-        bill__created_at__gte=month_start
+        bill__shop=shop, bill__created_at__gte=month_start
     ).values('product_name').annotate(
         total_qty=Sum('quantity'),
         total_revenue=Sum('total_price')
@@ -90,13 +93,14 @@ def dashboard_data(request):
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     month_start = today_start.replace(day=1)
 
+    shop = request.user.userprofile.shop
     # Weekly sales (last 7 days)
     weekly_data = []
     for i in range(6, -1, -1):
         day = today_start - timedelta(days=i)
         day_end = day + timedelta(days=1)
         total = Bill.objects.filter(
-            created_at__gte=day, created_at__lt=day_end
+            shop=shop, created_at__gte=day, created_at__lt=day_end
         ).aggregate(total=Sum('grand_total'))['total'] or 0
         weekly_data.append({
             'day': day.strftime('%a'),
@@ -118,7 +122,7 @@ def dashboard_data(request):
         else:
             m_end = now.replace(year=y, month=m + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
         total = Bill.objects.filter(
-            created_at__gte=m_start, created_at__lt=m_end
+            shop=shop, created_at__gte=m_start, created_at__lt=m_end
         ).aggregate(total=Sum('grand_total'))['total'] or 0
         monthly_data.append({
             'month': m_start.strftime('%b %Y'),
@@ -127,7 +131,7 @@ def dashboard_data(request):
 
     # Top products pie chart
     top_products = list(BillItem.objects.filter(
-        bill__created_at__gte=month_start
+        bill__shop=shop, bill__created_at__gte=month_start
     ).values('product_name').annotate(
         total_qty=Sum('quantity'),
         total_revenue=Sum('total_price')
@@ -151,7 +155,8 @@ def product_list(request):
     category_id = request.GET.get('category', '')
     status = request.GET.get('status', '')
 
-    products = Product.objects.select_related('category').all()
+    shop = request.user.userprofile.shop
+    products = Product.objects.filter(shop=shop).select_related('category')
 
     if query:
         products = products.filter(
@@ -170,7 +175,7 @@ def product_list(request):
     page = request.GET.get('page', 1)
     products_page = paginator.get_page(page)
 
-    categories = Category.objects.all()
+    categories = Category.objects.filter(shop=shop)
 
     return render(request, 'billing/products.html', {
         'products': products_page,
@@ -185,13 +190,15 @@ def product_list(request):
 def product_create(request):
     """Create a new product."""
     if request.method == 'POST':
-        form = ProductForm(request.POST)
+        form = ProductForm(request.POST, shop=request.user.userprofile.shop)
         if form.is_valid():
-            form.save()
+            product = form.save(commit=False)
+            product.shop = request.user.userprofile.shop
+            product.save()
             messages.success(request, 'Product created successfully!')
             return redirect('billing:product_list')
     else:
-        form = ProductForm()
+        form = ProductForm(shop=request.user.userprofile.shop)
     return render(request, 'billing/product_form.html', {
         'form': form,
         'title': 'Add New Product',
@@ -202,15 +209,15 @@ def product_create(request):
 @login_required
 def product_edit(request, pk):
     """Edit an existing product."""
-    product = get_object_or_404(Product, pk=pk)
+    product = get_object_or_404(Product, pk=pk, shop=request.user.userprofile.shop)
     if request.method == 'POST':
-        form = ProductForm(request.POST, instance=product)
+        form = ProductForm(request.POST, instance=product, shop=request.user.userprofile.shop)
         if form.is_valid():
             form.save()
             messages.success(request, 'Product updated successfully!')
             return redirect('billing:product_list')
     else:
-        form = ProductForm(instance=product)
+        form = ProductForm(instance=product, shop=request.user.userprofile.shop)
     return render(request, 'billing/product_form.html', {
         'form': form,
         'title': f'Edit: {product.name}',
@@ -222,7 +229,7 @@ def product_edit(request, pk):
 @login_required
 def product_delete(request, pk):
     """Delete a product."""
-    product = get_object_or_404(Product, pk=pk)
+    product = get_object_or_404(Product, pk=pk, shop=request.user.userprofile.shop)
     if request.method == 'POST':
         name = product.name
         product.delete()
@@ -240,6 +247,7 @@ def product_search(request):
 
     products = Product.objects.filter(
         Q(name__icontains=q) | Q(sku__icontains=q),
+        shop=request.user.userprofile.shop,
         is_active=True,
         stock__gt=0
     )[:10]
@@ -263,13 +271,15 @@ def category_list(request):
     if request.method == 'POST':
         form = CategoryForm(request.POST)
         if form.is_valid():
-            form.save()
+            cat = form.save(commit=False)
+            cat.shop = request.user.userprofile.shop
+            cat.save()
             messages.success(request, 'Category created!')
             return redirect('billing:category_list')
     else:
         form = CategoryForm()
 
-    categories = Category.objects.annotate(
+    categories = Category.objects.filter(shop=request.user.userprofile.shop).annotate(
         num_products=Count('products')
     ).order_by('name')
 
@@ -282,7 +292,7 @@ def category_list(request):
 @login_required
 def category_delete(request, pk):
     """Delete a category."""
-    category = get_object_or_404(Category, pk=pk)
+    category = get_object_or_404(Category, pk=pk, shop=request.user.userprofile.shop)
     if request.method == 'POST':
         category.delete()
         messages.success(request, f'Category "{category.name}" deleted.')
@@ -303,13 +313,13 @@ def new_bill(request):
         if not items_data:
             return JsonResponse({'error': 'No items in bill'}, status=400)
 
-        profile = ShopProfile.get_profile()
+        profile = request.user.userprofile.shop
         subtotal = Decimal('0')
 
         # Validate items and calculate subtotal
         validated_items = []
         for item in items_data:
-            product = Product.objects.filter(id=item.get('product_id')).first()
+            product = Product.objects.filter(id=item.get('product_id'), shop=profile).first()
             if not product:
                 return JsonResponse({'error': f'Product not found: {item.get("product_id")}'}, status=400)
             qty = int(item.get('quantity', 1))
@@ -333,6 +343,7 @@ def new_bill(request):
 
         # Create bill
         bill = Bill.objects.create(
+            shop=profile,
             customer_name=data.get('customer_name', 'Walk-in Customer') or 'Walk-in Customer',
             customer_phone=data.get('customer_phone', ''),
             subtotal=subtotal,
@@ -365,7 +376,7 @@ def new_bill(request):
             'grand_total': float(bill.grand_total),
         })
 
-    profile = ShopProfile.get_profile()
+    profile = request.user.userprofile.shop
     return render(request, 'billing/new_bill.html', {
         'tax_rate': float(profile.tax_rate),
     })
@@ -374,8 +385,8 @@ def new_bill(request):
 @login_required
 def bill_detail(request, pk):
     """View a bill / printable invoice."""
-    bill = get_object_or_404(Bill.objects.prefetch_related('items'), pk=pk)
-    profile = ShopProfile.get_profile()
+    bill = get_object_or_404(Bill.objects.prefetch_related('items'), pk=pk, shop=request.user.userprofile.shop)
+    profile = request.user.userprofile.shop
     return render(request, 'billing/bill_detail.html', {
         'bill': bill,
         'profile': profile,
@@ -390,7 +401,7 @@ def bill_list(request):
     date_to = request.GET.get('to', '')
     payment = request.GET.get('payment', '')
 
-    bills = Bill.objects.select_related('created_by').all()
+    bills = Bill.objects.filter(shop=request.user.userprofile.shop).select_related('created_by')
 
     if query:
         bills = bills.filter(
@@ -430,6 +441,7 @@ def reports(request):
     date_to = request.GET.get('to', now.strftime('%Y-%m-%d'))
 
     bills = Bill.objects.filter(
+        shop=request.user.userprofile.shop,
         created_at__date__gte=date_from,
         created_at__date__lte=date_to
     )
@@ -484,7 +496,7 @@ def reports_data(request):
     date_from = request.GET.get('from', '')
     date_to = request.GET.get('to', '')
 
-    bills = Bill.objects.all()
+    bills = Bill.objects.filter(shop=request.user.userprofile.shop)
     if date_from:
         bills = bills.filter(created_at__date__gte=date_from)
     if date_to:
@@ -533,7 +545,7 @@ def export_csv(request):
     date_from = request.GET.get('from', '')
     date_to = request.GET.get('to', '')
 
-    bills = Bill.objects.prefetch_related('items').all()
+    bills = Bill.objects.filter(shop=request.user.userprofile.shop).prefetch_related('items')
     if date_from:
         bills = bills.filter(created_at__date__gte=date_from)
     if date_to:
@@ -569,7 +581,7 @@ def export_csv(request):
 @login_required
 def settings_view(request):
     """Shop settings and password change."""
-    profile = ShopProfile.get_profile()
+    profile = request.user.userprofile.shop
 
     if request.method == 'POST':
         action = request.POST.get('action', '')

@@ -9,7 +9,8 @@ import uuid
 
 class Category(models.Model):
     """Product category for organizing inventory."""
-    name = models.CharField(max_length=100, unique=True)
+    shop = models.ForeignKey('ShopProfile', on_delete=models.CASCADE, related_name='categories')
+    name = models.CharField(max_length=100)
     description = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -40,7 +41,8 @@ class Product(models.Model):
     ]
 
     name = models.CharField(max_length=200)
-    sku = models.CharField(max_length=50, unique=True, blank=True)
+    sku = models.CharField(max_length=50, blank=True)
+    shop = models.ForeignKey('ShopProfile', on_delete=models.CASCADE, related_name='products')
     category = models.ForeignKey(
         Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='products'
     )
@@ -85,23 +87,22 @@ class ShopProfile(models.Model):
     tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     currency_symbol = models.CharField(max_length=5, default='₹')
     low_stock_threshold = models.IntegerField(default=10)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = 'Shop Profile'
-        verbose_name_plural = 'Shop Profile'
+        verbose_name_plural = 'Shop Profiles'
 
     def __str__(self):
         return self.name
 
-    def save(self, *args, **kwargs):
-        # Ensure only one instance exists (singleton)
-        self.pk = 1
-        super().save(*args, **kwargs)
+class UserProfile(models.Model):
+    """Links a Django User to a specific Shop."""
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    shop = models.ForeignKey(ShopProfile, on_delete=models.CASCADE, related_name='users')
 
-    @classmethod
-    def get_profile(cls):
-        profile, _ = cls.objects.get_or_create(pk=1)
-        return profile
+    def __str__(self):
+        return f"{self.user.username} - {self.shop.name}"
 
 
 class Bill(models.Model):
@@ -113,7 +114,8 @@ class Bill(models.Model):
         ('other', 'Other'),
     ]
 
-    bill_number = models.CharField(max_length=20, unique=True, editable=False)
+    shop = models.ForeignKey(ShopProfile, on_delete=models.CASCADE, related_name='bills')
+    bill_number = models.CharField(max_length=20, editable=False)
     customer_name = models.CharField(max_length=200, blank=True, default='Walk-in Customer')
     customer_phone = models.CharField(max_length=20, blank=True, default='')
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)

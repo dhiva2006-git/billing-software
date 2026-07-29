@@ -63,40 +63,12 @@ WSGI_APPLICATION = 'shopbill.wsgi.application'
 # Default target: MySQL via XAMPP (port 3306, user 'root', password '')
 # Checks if MySQL port is accessible; falls back to sqlite3 if MySQL service is not started.
 
-def is_mysql_available():
-    import socket
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(1)
-    try:
-        s.connect(('127.0.0.1', 3306))
-        s.close()
-        return True
-    except Exception:
-        return False
-
-if os.environ.get('USE_SQLITE', '0') == '1' or not is_mysql_available():
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'shopbill_db',
-            'USER': 'root',
-            'PASSWORD': '',
-            'HOST': 'localhost',
-            'PORT': '3306',
-            'OPTIONS': {
-                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-                'charset': 'utf8mb4',
-            },
-        }
-    }
-
+}
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
