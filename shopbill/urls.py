@@ -12,8 +12,14 @@ from django.conf import settings
 # pyrefly: ignore [missing-import]
 from django.conf.urls.static import static
 
+from billing import views as billing_views
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    path('register/', billing_views.register, name='register'),
+
     path('login/', auth_views.LoginView.as_view(
         template_name='registration/login.html',
         redirect_authenticated_user=True

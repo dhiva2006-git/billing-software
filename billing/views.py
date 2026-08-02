@@ -24,9 +24,39 @@ from django.utils import timezone
 # pyrefly: ignore [missing-import]
 from django.core.paginator import Paginator
 
-from .models import Category, Product, ShopProfile, Bill, BillItem
-from .forms import ProductForm, CategoryForm, ShopProfileForm
+from .models import Category, Product, ShopProfile, Bill, BillItem, UserProfile
+from .forms import ProductForm, CategoryForm, ShopProfileForm, RegisterForm
+from django.contrib.auth import login
 
+
+
+def register(request):
+    if request.user.is_authenticated:
+        return redirect("billing:dashboard")
+
+    if request.method == "POST":
+        form = RegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+
+            shop = ShopProfile.objects.create(
+                name=f"{user.username}'s Shop"
+            )
+
+            UserProfile.objects.create(
+                user=user,
+                shop=shop
+            )
+
+            login(request, user)
+            messages.success(request, "Registration successful!")
+            return redirect("billing:dashboard")
+    else:
+        form = RegisterForm()
+
+    return render(request, "registration/register.html", {
+        "form": form
+    })
 
 # ─── DASHBOARD ───────────────────────────────────────────────
 @login_required
